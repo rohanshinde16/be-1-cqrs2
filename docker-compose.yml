@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+    webserver:
+        build:
+            context: ./
+            dockerfile: .docker/nginx/Dockerfile
+        ports:
+            - 8080:8080
+        depends_on:
+            - backend
+        volumes:
+            - ${DOCKER_APP_PATH:-./}:/var/www:ro
+            - ${DOCKER_APP_PATH:-./}/.docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+        networks:
+            - backend
+
+    backend:
+        build:
+            context: ./
+            dockerfile: .docker/php/Dockerfile
+        volumes:
+            - ${DOCKER_APP_PATH:-./}:/var/www
+            - ${DOCKER_APP_PATH:-./}/.docker/php/conf.d/opcache.ini-development:/usr/local/etc/php/conf.d/opcache.ini
+            - ${DOCKER_APP_PATH:-./}/.docker/php/conf.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
+        depends_on:
+            - database
+        networks:
+            - backend
+
+    database:
+        image: postgres:14-bullseye
+        volumes:
+            - database:/var/lib/postgresql/data:rw
+        ports:
+            - ${DB_PORT:-5432}:5432
+        environment:
+            POSTGRES_DB: ${DB_PASSWORD:-app}
+            POSTGRES_USER: ${DB_DATABASE:-postgres}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+
+volumes:
+    database:
+networks:
+    backend:
+        driver: bridge
